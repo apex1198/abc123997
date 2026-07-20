@@ -1,0 +1,46 @@
+name: Deploy Kho Truyen to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prepare static entry
+        run: |
+          mkdir -p _site
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <html lang="vi">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width,initial-scale=1">
+            <meta http-equiv="refresh" content="0;url=https://kho-truyen-api.nerrf.chatgpt.site">
+            <title>Kho Truyện API</title>
+            <style>body{margin:0;background:#111;color:#f8d648;font:600 18px Arial;display:grid;place-items:center;min-height:100vh}a{color:#f8d648}</style>
+          </head>
+          <body><p>Đang mở <a href="https://kho-truyen-api.nerrf.chatgpt.site">Kho Truyện API</a>…</p></body>
+          </html>
+          HTML
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
