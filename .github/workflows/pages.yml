@@ -21,7 +21,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Create static export
+      - name: Create framework-free static export
         env:
           TOKEN: ${{ secrets.SITES_BYPASS_TOKEN }}
         run: |
@@ -33,14 +33,44 @@ jobs:
           import re
 
           root = Path("_site")
-          text_types = {".html", ".js", ".mjs", ".css", ".json"}
           for path in root.rglob("*"):
-              if not path.is_file() or path.suffix not in text_types:
+              if not path.is_file() or path.suffix not in {".html", ".css"}:
                   continue
               text = path.read_text(encoding="utf-8", errors="ignore")
-              text = re.sub(r"([\"'\`])/(?!abc123997/|/)", r"\1/abc123997/", text)
+              text = re.sub(r"([\"'])/(?!abc123997/|/)", r"\1/abc123997/", text)
               text = text.replace("url(/", "url(/abc123997/")
               text = text.replace("/abc123997/abc123997/", "/abc123997/")
+              if path.suffix == ".html":
+                  text = re.sub(r"<script\b[^>]*>.*?</script>", "", text, flags=re.I | re.S)
+                  interaction = '''<script>
+          (() => {
+            const root = document.querySelector('main');
+            const toggle = document.querySelector('[role="switch"][aria-label="Dark mode"]');
+            const saved = localStorage.getItem('khotruyen-theme');
+            const applyTheme = (theme) => {
+              root.dataset.theme = theme;
+              toggle.setAttribute('aria-checked', String(theme === 'dark'));
+              localStorage.setItem('khotruyen-theme', theme);
+            };
+            applyTheme(saved === 'light' || saved === 'dark' ? saved : 'dark');
+            toggle.addEventListener('click', () => applyTheme(root.dataset.theme === 'dark' ? 'light' : 'dark'));
+
+            const menuButton = document.querySelector('button[aria-label="Mở menu"]');
+            const sidebar = document.querySelector('aside');
+            let menuOpen = false;
+            menuButton.addEventListener('click', () => {
+              menuOpen = !menuOpen;
+              sidebar.style.transform = menuOpen ? 'translateX(0)' : '';
+              menuButton.setAttribute('aria-expanded', String(menuOpen));
+            });
+            sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+              menuOpen = false;
+              sidebar.style.transform = '';
+              menuButton.setAttribute('aria-expanded', 'false');
+            }));
+          })();
+          </script>'''
+                  text = text.replace("</body>", interaction + "</body>")
               path.write_text(text, encoding="utf-8")
           PY
           touch _site/.nojekyll
