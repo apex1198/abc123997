@@ -28,13 +28,14 @@ jobs:
           mkdir -p export-source _site
           wget --header="OAI-Sites-Authorization: Bearer $TOKEN" --mirror --page-requisites --convert-links --adjust-extension --no-parent --directory-prefix=export-source https://kho-truyen-api.nerrf.chatgpt.site/
           cp -a export-source/kho-truyen-api.nerrf.chatgpt.site/. _site/
+          wget --header="OAI-Sites-Authorization: Bearer $TOKEN" -O _site/github-pages-interactions.js https://kho-truyen-api.nerrf.chatgpt.site/github-pages-interactions.js
           python3 - <<'PY'
           from pathlib import Path
           import re
 
           root = Path("_site")
           for path in root.rglob("*"):
-              if not path.is_file() or path.suffix not in {".html", ".css"}:
+              if not path.is_file() or path.suffix not in {".html", ".css", ".js"}:
                   continue
               text = path.read_text(encoding="utf-8", errors="ignore")
               text = re.sub(r"([\"'])/(?!abc123997/|/)", r"\1/abc123997/", text)
@@ -69,7 +70,7 @@ jobs:
               menuButton.setAttribute('aria-expanded', 'false');
             }));
           })();
-          </script>'''
+          </script><script src="/abc123997/github-pages-interactions.js"></script>'''
                   text = text.replace("</body>", interaction + "</body>")
               path.write_text(text, encoding="utf-8")
           PY
