@@ -1,4 +1,4 @@
-name: Deploy Kho Truyen to Pages
+name: Deploy Kho Truyen Static Export
 
 on:
   push:
@@ -21,17 +21,33 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Mirror production website
+      - name: Create static export
         env:
           TOKEN: ${{ secrets.SITES_BYPASS_TOKEN }}
         run: |
-          mkdir -p mirror _site
-          wget --header="OAI-Sites-Authorization: Bearer $TOKEN" --mirror --page-requisites --convert-links --adjust-extension --no-parent --directory-prefix=mirror https://kho-truyen-api.nerrf.chatgpt.site/
-          cp -a mirror/kho-truyen-api.nerrf.chatgpt.site/. _site/
+          mkdir -p export-source _site
+          wget --header="OAI-Sites-Authorization: Bearer $TOKEN" --mirror --page-requisites --convert-links --adjust-extension --no-parent --directory-prefix=export-source https://kho-truyen-api.nerrf.chatgpt.site/
+          cp -a export-source/kho-truyen-api.nerrf.chatgpt.site/. _site/
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path("_site")
+          text_types = {".html", ".js", ".mjs", ".css", ".json"}
+          for path in root.rglob("*"):
+              if not path.is_file() or path.suffix not in text_types:
+                  continue
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              text = re.sub(r"([\"'\`])/(?!abc123997/|/)", r"\1/abc123997/", text)
+              text = text.replace("url(/", "url(/abc123997/")
+              text = text.replace("/abc123997/abc123997/", "/abc123997/")
+              path.write_text(text, encoding="utf-8")
+          PY
+          touch _site/.nojekyll
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
-      - name: Deploy to GitHub Pages
+      - name: Deploy static export to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
